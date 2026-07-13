@@ -80,6 +80,9 @@ jobs:
           # ====================================================================
 
     steps:
+      - name: Checkout this repo (meta helper script)
+        uses: actions/checkout@v4
+
       - name: Clone ${{ matrix.name }}
         env:
           REPO_URL: ${{ matrix.url }}
@@ -137,22 +140,7 @@ jobs:
           out="$RUNNER_TEMP/out"
           mkdir -p "$out"
           cp "$json" "$out/$APP.json"
-          APP="$APP" REPO="$repo" URL="$url" RESULT="$json" \
-          python3 - "$out/meta.json" <<'PY_INNER'
-import json, os, sys
-result = json.load(open(os.environ["RESULT"]))
-comp = [c for c in result.get("composition", []) if c.get("type") == "programming"]
-tot = sum(c.get("nbLocs", 0) for c in comp)
-if tot > 0:
-    top = max(comp, key=lambda c: c.get("nbLocs", 0))
-    lang, pct = top.get("language", "-"), round(top.get("nbLocs", 0) * 100 / tot)
-else:
-    lang, pct = "-", 0
-json.dump({"app": os.environ["APP"], "repo": os.environ["REPO"],
-           "profilerUrl": os.environ["URL"], "lang": lang, "langPct": pct},
-          open(sys.argv[1], "w"))
-print(f"Dominant language: {lang} ({pct}%)")
-PY_INNER
+          python3 page/result_meta.py "$out/meta.json" "$APP" "$repo" "$url" "$json"
           cat "$out/meta.json"; echo
 
       - name: Upload result (${{ matrix.name }})

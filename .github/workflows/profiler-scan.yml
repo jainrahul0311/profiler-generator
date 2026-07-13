@@ -99,11 +99,38 @@ jobs:
           #     -v <src>:/source \
           #     -v <out>:/home/profiler/.local/share/CAST/CAST-Profiler \
           #     castimaging/profiler-cli:latest --name <app> /source -ci
+          # Tee the CLI output so we can extract the result URL it prints at the end.
           docker run --rm --pull always \
             -v "${PWD}/source:/source" \
             -v "${PWD}/results:/home/profiler/.local/share/CAST/CAST-Profiler" \
             castimaging/profiler-cli:latest \
-            --name "$APP" /source -ci
+            --name "$APP" /source -ci 2>&1 | tee "$RUNNER_TEMP/profiler.log"
+
+      - name: Capture profiler result URL
+        env:
+          APP: ${{ matrix.name }}
+        run: |
+          # The CLI prints e.g.:
+          #   The CAST Profiler report can be obtained at: https://profiler.castsoftware.io/v2/results?at=<uuid>
+          url="$(grep -oE 'https://profiler\.castsoftware\.io/v2/results\?at=[0-9a-fA-F-]+' \
+                   "$RUNNER_TEMP/profiler.log" | tail -n1)"
+          if [ -z "$url" ]; then
+            echo "::warning::No profiler result URL found in the CLI output for $APP"
+            url="(no URL produced)"
+          fi
+          echo "$APP result URL: $url"
+          # Write a single "<app>\t<url>" line to a file that the collect job gathers.
+          mkdir -p "$RUNNER_TEMP/url"
+          printf '%s\t%s\n' "$APP" "$url" > "$RUNNER_TEMP/url/$APP.txt"
+
+      - name: Upload result URL
+        uses: actions/upload-artifact@v7
+        with:
+          name: profiler-url-${{ matrix.name }}
+          path: ${{ runner.temp }}/url/${{ matrix.name }}.txt
+          overwrite: true
+          retention-days: 3
+          if-no-files-found: warn
 
       - name: Locate the .json result
         env:
@@ -134,3 +161,41 @@ jobs:
           retention-days: 3
           if-no-files-found: error
           compression-level: 0               # payload is already a .zip
+
+  # ===========================================================================
+  #  Collect every scan's profiler result URL and print them all in one place.
+  #  Runs after all scan jobs finish (even if some failed) and gathers the
+  #  per-app "profiler-url-*" artifacts each scan job uploaded.
+  # ===========================================================================
+  collect-urls:
+    name: Collect profiler result URLs
+    needs: scan
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all URL artifacts
+        uses: actions/download-artifact@v6
+        with:
+          pattern: profiler-url-*
+          path: urls
+          merge-multiple: true
+
+      - name: Print all profiler result URLs
+        run: |
+          echo "## CAST Profiler result URLs" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| App | Result URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | ---------- |" >> "$GITHUB_STEP_SUMMARY"
+          echo ""
+          echo "==================== CAST Profiler result URLs ===================="
+          if [ -d urls ] && ls urls/*.txt >/dev/null 2>&1; then
+            # Each file holds one "<app>\t<url>" line; sort by app name.
+            sort urls/*.txt | while IFS=$'\t' read -r app url; do
+              printf '%-40s %s\n' "$app" "$url"
+              echo "| \`$app\` | $url |" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "No URL artifacts were found."
+            echo "_No URL artifacts were found._" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "=================================================================="

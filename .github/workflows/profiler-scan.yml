@@ -55,20 +55,14 @@ jobs:
       matrix:
         include:
           # ===== EDIT THIS LIST (url = public clone URL, name = --name app) ====
-          - name: aws-mainframe-mainframe
-            url: https://github.com/aws-samples/aws-mainframe-modernization-carddemo
-          - name: razorpay-dotnet
-            url: https://github.com/razorpay/razorpay-dotnet-testapp.git
-          - name: spring-petclinic-microservices-jee
-            url: https://github.com/spring-petclinic/spring-petclinic-microservices
-          - name: eshop-csharp-dotnet
-            url: https://github.com/dotnet-architecture/eShopModernizing
-          - name: guava-jee
-            url: https://github.com/google/guava.git
-          - name: strix-python
-            url: https://github.com/usestrix/strix.git
-          - name: nopCommerce
-            url: https://github.com/nopSolutions/nopCommerce
+          - name: intellij-community
+            url: https://github.com/jetbrains/intellij-community
+          - name: apache-netbeans
+            url: https://github.com/apache/netbeans.git
+          - name: keycloak
+            url: https://github.com/keycloak/keycloak
+          - name: jetbrains-android
+            url: https://github.com/JetBrains/android
           # ====================================================================
 
     steps:

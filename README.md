@@ -36,13 +36,10 @@ The workflow mounts a host folder onto that container path, so it can pick up
 
 | App name           | Repository |
 | ------------------ | ---------- |
-| `aws-mainframe-mainframe`             | https://github.com/aws-samples/aws-mainframe-modernization-carddemo |
-| `razorpay-dotnet`                     | https://github.com/razorpay/razorpay-dotnet-testapp |
-| `spring-petclinic-microservices-jee`  | https://github.com/spring-petclinic/spring-petclinic-microservices |
-| `eshop-csharp-dotnet`                 | https://github.com/dotnet-architecture/eShopModernizing |
-| `guava-jee`                           | https://github.com/google/guava |
-| `strix-python`                        | https://github.com/usestrix/strix |
-| `nopCommerce`                         | https://github.com/nopSolutions/nopCommerce |
+| `intellij-community`  | https://github.com/jetbrains/intellij-community |
+| `apache-netbeans`     | https://github.com/apache/netbeans |
+| `keycloak`            | https://github.com/keycloak/keycloak |
+| `jetbrains-android`   | https://github.com/JetBrains/android |
 
 To add or remove a project, edit the `matrix.include` list in the workflow —
 each entry is a `url` (public clone URL) and a `name` (the `--name` app name,

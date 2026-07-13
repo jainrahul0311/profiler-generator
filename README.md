@@ -40,6 +40,13 @@ The workflow mounts a host folder onto that container path, so it can pick up
 | `apache-netbeans`     | https://github.com/apache/netbeans |
 | `keycloak`            | https://github.com/keycloak/keycloak |
 | `jetbrains-android`   | https://github.com/JetBrains/android |
+| `dotnet-roslyn`       | https://github.com/dotnet/roslyn |
+| `elasticsearch`       | https://github.com/elastic/elasticsearch |
+| `apache-camel`        | https://github.com/apache/camel |
+| `dotnet-runtime`      | https://github.com/dotnet/runtime |
+| `apache-beam`         | https://github.com/apache/beam |
+| `apache-hadoop`       | https://github.com/apache/hadoop |
+| `mono`                | https://github.com/mono/mono |
 
 To add or remove a project, edit the `matrix.include` list in the workflow —
 each entry is a `url` (public clone URL) and a `name` (the `--name` app name,

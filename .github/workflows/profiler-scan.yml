@@ -63,6 +63,20 @@ jobs:
             url: https://github.com/keycloak/keycloak
           - name: jetbrains-android
             url: https://github.com/JetBrains/android
+          - name: dotnet-roslyn
+            url: https://github.com/dotnet/roslyn
+          - name: elasticsearch
+            url: https://github.com/elastic/elasticsearch
+          - name: apache-camel
+            url: https://github.com/apache/camel
+          - name: dotnet-runtime
+            url: https://github.com/dotnet/runtime
+          - name: apache-beam
+            url: https://github.com/apache/beam
+          - name: apache-hadoop
+            url: https://github.com/apache/hadoop
+          - name: mono
+            url: https://github.com/mono/mono
           # ====================================================================
 
     steps:

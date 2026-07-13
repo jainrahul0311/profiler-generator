@@ -67,6 +67,10 @@ The **Collect profiler result URLs** job at the end of every run prints all the
 and run summary). If any scan job fails, that job still runs but is flagged with a
 warning.
 
+Each scan job briefly uploads a tiny `profiler-url-<app>` artifact only so the
+collect job can gather the URLs; the collect job **deletes those artifacts at the
+end**, so a finished run keeps only the `<app>.json` artifacts.
+
 ## Running locally
 
 ```bash

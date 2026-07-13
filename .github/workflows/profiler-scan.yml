@@ -166,12 +166,19 @@ jobs:
   #  Collect every scan's profiler result URL and print them all in one place.
   #  Runs after all scan jobs finish (even if some failed) and gathers the
   #  per-app "profiler-url-*" artifacts each scan job uploaded.
+  #
+  #  The "profiler-url-*" artifacts are only transient scratch used to pass each
+  #  URL to this job — the final step DELETES them so the finished run keeps only
+  #  the <app>.json artifacts. Cleanup runs on success / failure / warn alike.
   # ===========================================================================
   collect-urls:
     name: Collect profiler result URLs
     needs: scan
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write            # needed to delete the transient URL artifacts
     steps:
       - name: Download all URL artifacts
         uses: actions/download-artifact@v6
@@ -209,3 +216,26 @@ jobs:
         run: |
           echo "::warning title=Some scans failed::One or more scan jobs did not succeed (needs.scan.result='${{ needs.scan.result }}'). Result URLs above cover only the scans that completed."
           echo "> ⚠️ One or more scan jobs did not succeed — result URLs above cover only the scans that completed." >> "$GITHUB_STEP_SUMMARY"
+
+      # Delete the transient "profiler-url-*" artifacts now that their URLs have
+      # been printed, so the finished run keeps only the <app>.json artifacts.
+      # Runs regardless of outcome (success / failure / warn).
+      - name: Clean up URL artifacts
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ids="$(gh api --paginate \
+                   "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+                   -q '.artifacts[] | select(.name | startswith("profiler-url-")) | .id')"
+          if [ -z "$ids" ]; then
+            echo "No profiler-url-* artifacts to delete."
+            exit 0
+          fi
+          for id in $ids; do
+            if gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id"; then
+              echo "Deleted URL artifact $id"
+            else
+              echo "::warning::Failed to delete URL artifact $id"
+            fi
+          done

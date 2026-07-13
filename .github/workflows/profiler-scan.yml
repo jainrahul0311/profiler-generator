@@ -1,0 +1,128 @@
+# =============================================================================
+#  Scheduled CAST Profiler scan
+# =============================================================================
+#  For every project in the matrix below, in its OWN parallel job:
+#    1. clone the repo (shallow)
+#    2. run the CAST Profiler CLI docker image on it
+#    3. find the generated <app>.json (D3 evaluation + telemetry result)
+#    4. upload it as a build artifact named after the app
+#
+#  Runs at 9 PM IST (= 15:30 UTC), Monday-Friday, and can be started manually.
+#
+#  ---------------------------------------------------------------------------
+#  TO ADD / REMOVE A PROJECT: edit the matrix `include:` list below.
+#    - url : the repo's public clone URL
+#    - name: the app name passed to the profiler's --name flag (also the folder
+#            the profiler creates in its output, and the artifact name)
+#
+#  NO SECRET REQUIRED: the profiler CLI runs without an analysis key.
+#  ---------------------------------------------------------------------------
+#
+#  Mirrors the local command:
+#    docker run --rm --pull always \
+#      -v <src>:/source \
+#      castimaging/profiler-cli:latest --name <app> /source -ci
+#
+#  The CLI writes its results, inside the container, to:
+#    /home/profiler/.local/share/CAST/CAST-Profiler/<app>/
+#        <app>.json                  <- D3 evaluation + telemetry (the artifact)
+#        <app>.json.zs               <- compressed profiler report
+#        <app>-insight-report.html   <- HTML insight report
+#  We mount a host folder onto that path so we can collect <app>.json.
+# =============================================================================
+
+name: Scheduled Profiler scan
+
+on:
+  schedule:
+    - cron: '30 14 * * 1-5'   # 15:30 UTC == 21:00 (9 PM) IST, Mon-Fri
+  workflow_dispatch: {}     # allow manual runs from the Actions tab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: profiler-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: scan ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false          # one project failing must NOT cancel the others
+      # max-parallel: 5         # uncomment to cap how many scans run at once
+      matrix:
+        include:
+          # ===== EDIT THIS LIST (url = public clone URL, name = --name app) ====
+          - name: aws-mainframe-mainframe
+            url: https://github.com/aws-samples/aws-mainframe-modernization-carddemo
+          - name: razorpay-dotnet
+            url: https://github.com/razorpay/razorpay-dotnet-testapp.git
+          - name: spring-petclinic-microservices-jee
+            url: https://github.com/spring-petclinic/spring-petclinic-microservices
+          - name: eshop-csharp-dotnet
+            url: https://github.com/dotnet-architecture/eShopModernizing
+          - name: guava-jee
+            url: https://github.com/google/guava.git
+          - name: strix-python
+            url: https://github.com/usestrix/strix.git
+          - name: nopCommerce
+            url: https://github.com/nopSolutions/nopCommerce
+          # ====================================================================
+
+    steps:
+      - name: Clone ${{ matrix.name }}
+        env:
+          REPO_URL: ${{ matrix.url }}
+        run: |
+          git clone --depth 1 "$REPO_URL" source
+
+      - name: Run CAST Profiler CLI
+        env:
+          APP: ${{ matrix.name }}
+        run: |
+          mkdir -p results
+          # The profiler runs as user 'profiler' (uid 10001) in the container and
+          # must be able to write into the mounted output folder.
+          chmod 777 results
+          # Mirrors the local command, plus a mount for the results folder:
+          #   docker run --rm --pull always \
+          #     -v <src>:/source \
+          #     -v <out>:/home/profiler/.local/share/CAST/CAST-Profiler \
+          #     castimaging/profiler-cli:latest --name <app> /source -ci
+          docker run --rm --pull always \
+            -v "${PWD}/source:/source" \
+            -v "${PWD}/results:/home/profiler/.local/share/CAST/CAST-Profiler" \
+            castimaging/profiler-cli:latest \
+            --name "$APP" /source -ci
+
+      - name: Locate the .json result
+        env:
+          APP: ${{ matrix.name }}
+        run: |
+          # The container wrote as a different user; take ownership so we can read it.
+          sudo chown -R "$(id -u):$(id -g)" results || true
+          # Layout: results/<app>/<app>.json
+          json="$(find "results/$APP" -type f -name '*.json' ! -name '*.json.zs' \
+                    -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n1 | cut -d' ' -f2-)"
+          if [ -z "$json" ]; then
+            echo "::error::No .json found under results/$APP — did the profiler succeed?"
+            echo "results tree:"; find results -maxdepth 4 2>/dev/null | sed 's/^/  /' || true
+            exit 1
+          fi
+          echo "Found: $json ($(du -h "$json" | cut -f1))"
+          echo "JSON_PATH=$json" >> "$GITHUB_ENV"
+          # Zip just that one file (-j = store only the filename, drop its folder path)
+          zip -j -0 "$RUNNER_TEMP/$APP.json.zip" "$json"
+          echo "JSON_ZIP=$RUNNER_TEMP/$APP.json.zip" >> "$GITHUB_ENV"
+
+      - name: Upload ${{ matrix.name }}.json
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.name }}.json      # stable name -> same artifact name every day
+          path: ${{ env.JSON_ZIP }}          # upload the zip of the single .json
+          overwrite: true
+          retention-days: 3
+          if-no-files-found: error
+          compression-level: 0               # payload is already a .zip

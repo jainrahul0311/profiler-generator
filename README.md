@@ -7,7 +7,7 @@ artifact.
 ## How it works
 
 [`.github/workflows/profiler-scan.yml`](.github/workflows/profiler-scan.yml)
-runs **at 9 PM IST (15:30 UTC), Monday–Friday** and can also be started
+runs **at 9 PM IST (15:30 UTC) every day** and can also be started
 manually. For each project in the matrix, in its own parallel job, it:
 
 1. clones the repo (shallow),
@@ -59,8 +59,13 @@ None. The CAST Profiler CLI runs without an analysis key.
 ## Getting the results
 
 Open the latest **Scheduled Profiler scan** run under the **Actions** tab and
-download the `<app>.json` artifacts. They use a stable name and short
+download the `<app>.json` artifacts. They use a stable name and a 1-day
 retention, so each day's run refreshes them.
+
+The **Collect profiler result URLs** job at the end of every run prints all the
+`https://profiler.castsoftware.io/v2/results?at=<id>` links in one place (job log
+and run summary). If any scan job fails, that job still runs but is flagged with a
+warning.
 
 ## Running locally
 

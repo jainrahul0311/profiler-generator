@@ -7,7 +7,7 @@
 #    3. find the generated <app>.json (D3 evaluation + telemetry result)
 #    4. upload it as a build artifact named after the app
 #
-#  Runs at 9 PM IST (= 15:30 UTC), Monday-Friday, and can be started manually.
+#  Runs at 9 PM IST (= 15:30 UTC) every day, and can be started manually.
 #
 #  ---------------------------------------------------------------------------
 #  TO ADD / REMOVE A PROJECT: edit the matrix `include:` list below.
@@ -35,7 +35,7 @@ name: Scheduled Profiler scan
 
 on:
   schedule:
-    - cron: '30 14 * * 1-5'   # 15:30 UTC == 21:00 (9 PM) IST, Mon-Fri
+    - cron: '30 14 * * *'    # 15:30 UTC == 21:00 (9 PM) IST, every day
   workflow_dispatch: {}     # allow manual runs from the Actions tab
 
 permissions:
@@ -129,7 +129,7 @@ jobs:
           name: profiler-url-${{ matrix.name }}
           path: ${{ runner.temp }}/url/${{ matrix.name }}.txt
           overwrite: true
-          retention-days: 3
+          retention-days: 1
           if-no-files-found: warn
 
       - name: Locate the .json result
@@ -158,7 +158,7 @@ jobs:
           name: ${{ matrix.name }}.json      # stable name -> same artifact name every day
           path: ${{ env.JSON_ZIP }}          # upload the zip of the single .json
           overwrite: true
-          retention-days: 3
+          retention-days: 1
           if-no-files-found: error
           compression-level: 0               # payload is already a .zip
 
@@ -199,3 +199,13 @@ jobs:
             echo "_No URL artifacts were found._" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "=================================================================="
+
+      # If ANY scan job failed, this job still runs (if: always) but must NOT be a
+      # clean success — surface a warning annotation so the run is flagged instead.
+      # needs.scan.result is the aggregate of all matrix jobs: 'success' only when
+      # every scan succeeded, otherwise 'failure'.
+      - name: Warn if any scan failed
+        if: ${{ needs.scan.result != 'success' }}
+        run: |
+          echo "::warning title=Some scans failed::One or more scan jobs did not succeed (needs.scan.result='${{ needs.scan.result }}'). Result URLs above cover only the scans that completed."
+          echo "> ⚠️ One or more scan jobs did not succeed — result URLs above cover only the scans that completed." >> "$GITHUB_STEP_SUMMARY"

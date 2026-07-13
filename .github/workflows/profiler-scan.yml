@@ -44,6 +44,7 @@ concurrency:
 env:
   RETENTION_DAYS: '1'        # JSON retention: artifact + dashboard download window
   LOG_RETENTION_DAYS: '90'   # GitHub's Actions log retention (for the dashboard's log links)
+  MAX_RUNS: '0'              # hard cap on runs kept in the dropdown (0 = keep all; metadata is tiny)
 
 jobs:
   scan:
@@ -199,17 +200,19 @@ jobs:
           RUN_STATUS: ${{ needs.scan.result }}
           RETENTION_DAYS: ${{ env.RETENTION_DAYS }}
           LOG_RETENTION_DAYS: ${{ env.LOG_RETENTION_DAYS }}
+          MAX_RUNS: ${{ env.MAX_RUNS }}
         run: python3 page/build_site.py
 
-      - name: Commit & push to gh-pages
+      - name: Publish to gh-pages (squashed, single commit)
         run: |
           cd site
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Publish the whole built tree as ONE fresh commit and force-push it.
+          # This discards gh-pages git history every run, so the repo never
+          # accumulates the large result blobs that pruning removes from the tree.
+          # Run history is preserved in the FILES (runs/*.json), not in commits.
+          git checkout --orphan publish
           git add -A
-          if git diff --cached --quiet; then
-            echo "No changes to publish."
-          else
-            git commit -m "Publish profiler dashboard for run #${{ github.run_number }}"
-            git push
-          fi
+          git commit -q -m "Publish profiler dashboard for run #${{ github.run_number }}"
+          git push -f origin publish:gh-pages

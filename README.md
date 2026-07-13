@@ -49,6 +49,19 @@ truth: it sets both the Actions artifact retention **and** how long the dashboar
 keeps JSON downloadable. Change it in one place. Raising it only affects future
 runs; lowering it prunes older JSON on the next run.
 
+### Storage / scaling
+
+The site is published to `gh-pages` as a **single squashed commit each run**
+(orphan commit, force-pushed). This discards gh-pages git history every run, so
+the repo never accumulates the large result blobs that pruning removes from the
+working tree — repo size stays ≈ the current tree (bounded downloadable JSON +
+tiny metadata) instead of growing ~one run's worth of blobs per day.
+
+Run history is preserved in the **files** (`runs/*.json`), not in git commits.
+Those metadata files are tiny (~5 KB/run, ~1.8 MB/year) and kept forever by
+default. Set `MAX_RUNS` (workflow `env`, `0` = unlimited) to hard-cap how many
+runs the dropdown keeps; older run files and their data are then pruned too.
+
 ### Where the profiler writes its output
 
 The CLI writes its results, **inside the container**, under

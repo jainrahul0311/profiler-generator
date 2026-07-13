@@ -67,6 +67,7 @@ def main():
     RUN_STATUS = env("RUN_STATUS", "success")
     RETENTION_DAYS = int(env("RETENTION_DAYS", "1"))
     LOG_RETENTION_DAYS = int(env("LOG_RETENTION_DAYS", "90"))
+    MAX_RUNS = int(env("MAX_RUNS", "0"))  # 0 = keep all runs in the dropdown
 
     now = datetime.now(timezone.utc)
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -147,6 +148,16 @@ def main():
         "number": RUN_NUMBER, "runId": RUN_ID, "finished": now_iso,
         "status": status, "repoCount": len(rows),
     }
+
+    # --- optional hard cap on how many runs the dropdown keeps -----------------
+    ordered = sorted(runs.values(), key=lambda r: r["number"], reverse=True)
+    if MAX_RUNS > 0 and len(ordered) > MAX_RUNS:
+        for entry in ordered[MAX_RUNS:]:
+            n = entry["number"]
+            (SITE / "runs" / f"run-{n}.json").unlink(missing_ok=True)
+            shutil.rmtree(SITE / "data" / f"run-{n}", ignore_errors=True)
+        ordered = ordered[:MAX_RUNS]
+    runs = {r["number"]: r for r in ordered}
 
     # --- prune old JSON + recompute availability flags for every run -----------
     for num, entry in list(runs.items()):

@@ -5,7 +5,12 @@
 #    1. clone the repo (shallow)
 #    2. run the CAST Profiler CLI docker image on it
 #    3. find the generated <app>.json (D3 evaluation + telemetry result)
-#    4. upload it as a build artifact named after the app
+#    4. derive the dominant language from the result's `composition`, capture the
+#       profiler result URL from the CLI output, and upload <app>.json + a small
+#       meta.json as one artifact
+#
+#  Then a single publish-page job builds a GitHub Pages dashboard (run history,
+#  per-repo profiler URL / logs / JSON download) and pushes it to gh-pages.
 #
 #  Runs at 9 PM IST (= 15:30 UTC) every day, and can be started manually.
 #
@@ -16,19 +21,10 @@
 #            the profiler creates in its output, and the artifact name)
 #
 #  NO SECRET REQUIRED: the profiler CLI runs without an analysis key.
-#  ---------------------------------------------------------------------------
 #
-#  Mirrors the local command:
-#    docker run --rm --pull always \
-#      -v <src>:/source \
-#      castimaging/profiler-cli:latest --name <app> /source -ci
-#
-#  The CLI writes its results, inside the container, to:
-#    /home/profiler/.local/share/CAST/CAST-Profiler/<app>/
-#        <app>.json                  <- D3 evaluation + telemetry (the artifact)
-#        <app>.json.zs               <- compressed profiler report
-#        <app>-insight-report.html   <- HTML insight report
-#  We mount a host folder onto that path so we can collect <app>.json.
+#  RETENTION_DAYS is the single source of truth for how long a result's JSON is
+#  kept: it sets both the Actions artifact retention AND how long the dashboard
+#  keeps the JSON downloadable before pruning it. Bump it in one place.
 # =============================================================================
 
 name: Scheduled Profiler scan
@@ -44,6 +40,10 @@ permissions:
 concurrency:
   group: profiler-scan
   cancel-in-progress: false
+
+env:
+  RETENTION_DAYS: '1'        # JSON retention: artifact + dashboard download window
+  LOG_RETENTION_DAYS: '90'   # GitHub's Actions log retention (for the dashboard's log links)
 
 jobs:
   scan:
@@ -106,35 +106,10 @@ jobs:
             castimaging/profiler-cli:latest \
             --name "$APP" /source -ci 2>&1 | tee "$RUNNER_TEMP/profiler.log"
 
-      - name: Capture profiler result URL
+      - name: Assemble result + meta
         env:
           APP: ${{ matrix.name }}
-        run: |
-          # The CLI prints e.g.:
-          #   The CAST Profiler report can be obtained at: https://profiler.castsoftware.io/v2/results?at=<uuid>
-          url="$(grep -oE 'https://profiler\.castsoftware\.io/v2/results\?at=[0-9a-fA-F-]+' \
-                   "$RUNNER_TEMP/profiler.log" | tail -n1)"
-          if [ -z "$url" ]; then
-            echo "::warning::No profiler result URL found in the CLI output for $APP"
-            url="(no URL produced)"
-          fi
-          echo "$APP result URL: $url"
-          # Write a single "<app>\t<url>" line to a file that the collect job gathers.
-          mkdir -p "$RUNNER_TEMP/url"
-          printf '%s\t%s\n' "$APP" "$url" > "$RUNNER_TEMP/url/$APP.txt"
-
-      - name: Upload result URL
-        uses: actions/upload-artifact@v7
-        with:
-          name: profiler-url-${{ matrix.name }}
-          path: ${{ runner.temp }}/url/${{ matrix.name }}.txt
-          overwrite: true
-          retention-days: 1
-          if-no-files-found: warn
-
-      - name: Locate the .json result
-        env:
-          APP: ${{ matrix.name }}
+          REPO_URL: ${{ matrix.url }}
         run: |
           # The container wrote as a different user; take ownership so we can read it.
           sudo chown -R "$(id -u):$(id -g)" results || true
@@ -147,95 +122,106 @@ jobs:
             exit 1
           fi
           echo "Found: $json ($(du -h "$json" | cut -f1))"
-          echo "JSON_PATH=$json" >> "$GITHUB_ENV"
-          # Zip just that one file (-j = store only the filename, drop its folder path)
-          zip -j -0 "$RUNNER_TEMP/$APP.json.zip" "$json"
-          echo "JSON_ZIP=$RUNNER_TEMP/$APP.json.zip" >> "$GITHUB_ENV"
 
-      - name: Upload ${{ matrix.name }}.json
+          # Profiler result URL printed by the CLI.
+          url="$(grep -oE 'https://profiler\.castsoftware\.io/v2/results\?at=[0-9a-fA-F-]+' \
+                   "$RUNNER_TEMP/profiler.log" | tail -n1)"
+          echo "Result URL: ${url:-<none>}"
+
+          # owner/repo from the clone URL.
+          repo="$(echo "$REPO_URL" | sed -E 's#^https?://github.com/##; s#\.git$##; s#/+$##')"
+
+          # Stage the artifact: the raw JSON + a small meta.json for the dashboard.
+          # meta.json's dominant language is the top programming language by lines
+          # of code, read from the result's `composition`.
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          cp "$json" "$out/$APP.json"
+          APP="$APP" REPO="$repo" URL="$url" RESULT="$json" \
+          python3 - "$out/meta.json" <<'PY_INNER'
+import json, os, sys
+result = json.load(open(os.environ["RESULT"]))
+comp = [c for c in result.get("composition", []) if c.get("type") == "programming"]
+tot = sum(c.get("nbLocs", 0) for c in comp)
+if tot > 0:
+    top = max(comp, key=lambda c: c.get("nbLocs", 0))
+    lang, pct = top.get("language", "-"), round(top.get("nbLocs", 0) * 100 / tot)
+else:
+    lang, pct = "-", 0
+json.dump({"app": os.environ["APP"], "repo": os.environ["REPO"],
+           "profilerUrl": os.environ["URL"], "lang": lang, "langPct": pct},
+          open(sys.argv[1], "w"))
+print(f"Dominant language: {lang} ({pct}%)")
+PY_INNER
+          cat "$out/meta.json"; echo
+
+      - name: Upload result (${{ matrix.name }})
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.name }}.json      # stable name -> same artifact name every day
-          path: ${{ env.JSON_ZIP }}          # upload the zip of the single .json
+          name: ${{ matrix.name }}            # one artifact per app: <app>.json + meta.json
+          path: ${{ runner.temp }}/out
           overwrite: true
-          retention-days: 1
+          retention-days: ${{ env.RETENTION_DAYS }}
           if-no-files-found: error
-          compression-level: 0               # payload is already a .zip
 
   # ===========================================================================
-  #  Collect every scan's profiler result URL and print them all in one place.
-  #  Runs after all scan jobs finish (even if some failed) and gathers the
-  #  per-app "profiler-url-*" artifacts each scan job uploaded.
-  #
-  #  The "profiler-url-*" artifacts are only transient scratch used to pass each
-  #  URL to this job — the final step DELETES them so the finished run keeps only
-  #  the <app>.json artifacts. Cleanup runs on success / failure / warn alike.
+  #  Build the GitHub Pages dashboard from every scan's result and push it to
+  #  the gh-pages branch (which also persists the run history across runs).
+  #  Runs after all scans finish, even if some failed.
   # ===========================================================================
-  collect-urls:
-    name: Collect profiler result URLs
+  publish-page:
+    name: Publish dashboard
     needs: scan
     if: always()
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      actions: write            # needed to delete the transient URL artifacts
+      contents: write           # push the built site to gh-pages
+      actions: read             # read this run's jobs (log links + scan times)
     steps:
-      - name: Download all URL artifacts
+      - name: Checkout repo (page template + build script)
+        uses: actions/checkout@v4
+
+      - name: Checkout gh-pages (existing history)
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: Download all result artifacts
         uses: actions/download-artifact@v6
         with:
-          pattern: profiler-url-*
-          path: urls
-          merge-multiple: true
+          path: incoming
 
-      - name: Print all profiler result URLs
-        run: |
-          echo "## CAST Profiler result URLs" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| App | Result URL |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| --- | ---------- |" >> "$GITHUB_STEP_SUMMARY"
-          echo ""
-          echo "==================== CAST Profiler result URLs ===================="
-          if [ -d urls ] && ls urls/*.txt >/dev/null 2>&1; then
-            # Each file holds one "<app>\t<url>" line; sort by app name.
-            sort urls/*.txt | while IFS=$'\t' read -r app url; do
-              printf '%-40s %s\n' "$app" "$url"
-              echo "| \`$app\` | $url |" >> "$GITHUB_STEP_SUMMARY"
-            done
-          else
-            echo "No URL artifacts were found."
-            echo "_No URL artifacts were found._" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo "=================================================================="
-
-      # If ANY scan job failed, this job still runs (if: always) but must NOT be a
-      # clean success — surface a warning annotation so the run is flagged instead.
-      # needs.scan.result is the aggregate of all matrix jobs: 'success' only when
-      # every scan succeeded, otherwise 'failure'.
-      - name: Warn if any scan failed
-        if: ${{ needs.scan.result != 'success' }}
-        run: |
-          echo "::warning title=Some scans failed::One or more scan jobs did not succeed (needs.scan.result='${{ needs.scan.result }}'). Result URLs above cover only the scans that completed."
-          echo "> ⚠️ One or more scan jobs did not succeed — result URLs above cover only the scans that completed." >> "$GITHUB_STEP_SUMMARY"
-
-      # Delete the transient "profiler-url-*" artifacts now that their URLs have
-      # been printed, so the finished run keeps only the <app>.json artifacts.
-      # Runs regardless of outcome (success / failure / warn).
-      - name: Clean up URL artifacts
-        if: always()
+      - name: Fetch this run's jobs (log links + times)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ids="$(gh api --paginate \
-                   "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
-                   -q '.artifacts[] | select(.name | startswith("profiler-url-")) | .id')"
-          if [ -z "$ids" ]; then
-            echo "No profiler-url-* artifacts to delete."
-            exit 0
+          gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=100" \
+            > "$RUNNER_TEMP/jobs.json"
+
+      - name: Build the dashboard
+        env:
+          SITE: site
+          INCOMING: incoming
+          JOBS_JSON: ${{ runner.temp }}/jobs.json
+          TEMPLATE: page/index.html
+          REPO: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_STATUS: ${{ needs.scan.result }}
+          RETENTION_DAYS: ${{ env.RETENTION_DAYS }}
+          LOG_RETENTION_DAYS: ${{ env.LOG_RETENTION_DAYS }}
+        run: python3 page/build_site.py
+
+      - name: Commit & push to gh-pages
+        run: |
+          cd site
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "Publish profiler dashboard for run #${{ github.run_number }}"
+            git push
           fi
-          for id in $ids; do
-            if gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id"; then
-              echo "Deleted URL artifact $id"
-            else
-              echo "::warning::Failed to delete URL artifact $id"
-            fi
-          done

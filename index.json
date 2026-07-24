@@ -1,0 +1,105 @@
+{
+  "repo": "jainrahul0311/profiler-generator",
+  "retentionDays": 1,
+  "runs": [
+    {
+      "number": 21,
+      "runId": "30107203853",
+      "finished": "2026-07-24T15:59:01Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 20,
+      "runId": "30023650511",
+      "finished": "2026-07-23T16:12:34Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 19,
+      "runId": "29935807554",
+      "finished": "2026-07-22T16:03:13Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 18,
+      "runId": "29846583138",
+      "finished": "2026-07-21T16:06:02Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 17,
+      "runId": "29758233755",
+      "finished": "2026-07-20T16:13:21Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 16,
+      "runId": "29692949504",
+      "finished": "2026-07-19T15:35:05Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 15,
+      "runId": "29650059768",
+      "finished": "2026-07-18T15:34:17Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 14,
+      "runId": "29594006414",
+      "finished": "2026-07-17T15:59:53Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 13,
+      "runId": "29513231643",
+      "finished": "2026-07-16T15:59:43Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 12,
+      "runId": "29430536730",
+      "finished": "2026-07-15T16:05:34Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 11,
+      "runId": "29347471551",
+      "finished": "2026-07-14T16:01:33Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 10,
+      "runId": "29305084664",
+      "finished": "2026-07-14T04:10:12Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 9,
+      "runId": "29269076757",
+      "finished": "2026-07-13T17:11:19Z",
+      "status": "success",
+      "repoCount": 11
+    },
+    {
+      "number": 8,
+      "runId": "29267726199",
+      "finished": "2026-07-13T16:51:10Z",
+      "status": "success",
+      "repoCount": 11
+    }
+  ],
+  "generated": "2026-07-24T15:59:01Z"
+}

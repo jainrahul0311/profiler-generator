@@ -1,0 +1,140 @@
+{
+  "number": 138,
+  "runId": "44409182219",
+  "finished": "2026-11-18T22:17:01Z",
+  "status": "success",
+  "rows": [
+    {
+      "app": "intellij-community",
+      "repo": "jetbrains/intellij-community",
+      "lang": "Java",
+      "langPct": 49,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=6b374521-37dc-45a6-826b-3135ce0d0992",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425785",
+      "when": "2026-11-18T22:16:52Z",
+      "bytes": 9130633,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "apache-camel",
+      "repo": "apache/camel",
+      "lang": "Java",
+      "langPct": 99,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=b7db1d9d-c9eb-4a86-892d-f78f4823d5bb",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425772",
+      "when": "2026-11-18T22:13:48Z",
+      "bytes": 3479517,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "apache-netbeans",
+      "repo": "apache/netbeans",
+      "lang": "Java",
+      "langPct": 84,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=7c753888-7700-4ff9-ae70-0722e6bb17f1",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425852",
+      "when": "2026-11-18T22:14:24Z",
+      "bytes": 2786356,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "elasticsearch",
+      "repo": "elastic/elasticsearch",
+      "lang": "Java",
+      "langPct": 97,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=ed234df6-542e-47f3-b40f-8d2a88a320cb",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425526",
+      "when": "2026-11-18T22:14:58Z",
+      "bytes": 2326482,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "dotnet-runtime",
+      "repo": "dotnet/runtime",
+      "lang": "C#",
+      "langPct": 75,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=43250c5d-0c0f-4aa3-9c64-ebe6ec8a1e52",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425736",
+      "when": "2026-11-18T22:13:55Z",
+      "bytes": 1496094,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "apache-hadoop",
+      "repo": "apache/hadoop",
+      "lang": "Java",
+      "langPct": 90,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=2527b4db-db74-49d2-9d2d-39109a16d075",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425924",
+      "when": "2026-11-18T22:13:04Z",
+      "bytes": 1442999,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "dotnet-roslyn",
+      "repo": "dotnet/roslyn",
+      "lang": "C#",
+      "langPct": 75,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=4b77cf99-593e-499d-9681-0d551369f469",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425816",
+      "when": "2026-11-18T22:13:52Z",
+      "bytes": 1286810,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "jetbrains-android",
+      "repo": "JetBrains/android",
+      "lang": "Kotlin",
+      "langPct": 63,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=3d712522-9908-4ac7-89f2-be04e4019aff",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425963",
+      "when": "2026-11-18T22:13:21Z",
+      "bytes": 1100022,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "apache-beam",
+      "repo": "apache/beam",
+      "lang": "Java",
+      "langPct": 62,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=3206b704-397c-450a-acce-efec3b83c671",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425716",
+      "when": "2026-11-18T22:12:46Z",
+      "bytes": 915054,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "keycloak",
+      "repo": "keycloak/keycloak",
+      "lang": "Java",
+      "langPct": 88,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=e21af6f2-bdaa-4853-b036-5fc9e5acf3c5",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425859",
+      "when": "2026-11-18T22:12:43Z",
+      "bytes": 852511,
+      "jsonAvailable": false,
+      "logAvailable": true
+    },
+    {
+      "app": "mono",
+      "repo": "mono/mono",
+      "lang": "C#",
+      "langPct": 89,
+      "profiler": "https://profiler.castsoftware.io/v2/results?at=025c9553-7631-4236-9127-59cb257b602c",
+      "log": "https://github.com/jainrahul0311/profiler-generator/actions/runs/44409182219/job/135172425788",
+      "when": "2026-11-18T22:13:44Z",
+      "bytes": 378287,
+      "jsonAvailable": false,
+      "logAvailable": true
+    }
+  ]
+}
